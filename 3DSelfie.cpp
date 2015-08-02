@@ -16,7 +16,7 @@ using namespace pcl;
 
 PointCloud<PointXYZRGBA>::Ptr cloudptr(new PointCloud<PointXYZRGBA>);
 PointCloud<PointXYZ>::Ptr fallbackCloud(new PointCloud<PointXYZ>);
-boost::shared_ptr<visualization::CloudViewer> viewer;
+//boost::shared_ptr<visualization::CloudViewer> viewer (new visualization::CloudViewer("v"));
 Grabber* kinectGrabber;
 unsigned int filesSaved = 0;
 bool saveCloud(false), noColour(false);
@@ -37,8 +37,8 @@ printUsage(const char* programName)
 void
 grabberCallback(const PointCloud<PointXYZRGBA>::ConstPtr& cloud)
 {
-    if (! viewer->wasStopped())
-        viewer->showCloud(cloud);
+    // if (! viewer->wasStopped())
+    //     viewer->showCloud(cloud);
         
     if (saveCloud)
     {
@@ -102,51 +102,53 @@ main(int argc, char** argv)
         return 0;
     }
     
-    if (justVisualize)
-    {
-        try
-        {
-            io::loadPCDFile<PointXYZRGBA>(filename.c_str(), *cloudptr);
-        }
-        catch (PCLException e1)
-        {
-            try
-            {
-                io::loadPCDFile<PointXYZ>(filename.c_str(), *fallbackCloud);
-            }
-            catch (PCLException e2)
-            {
-                return -1;
-            }
+    // if (justVisualize)
+    // {
+    //     try
+    //     {
+    //         io::loadPCDFile<PointXYZRGBA>(filename.c_str(), *cloudptr);
+    //     }
+    //     catch (PCLException e1)
+    //     {
+    //         try
+    //         {
+    //             io::loadPCDFile<PointXYZ>(filename.c_str(), *fallbackCloud);
+    //         }
+    //         catch (PCLException e2)
+    //         {
+    //             return -1;
+    //         }
             
-            noColour = true;
-        }
+    //         noColour = true;
+    //     }
         
-        cout << "Loaded " << filename << "." << endl;
-        if (noColour)
-            cout << "This file has no RGBA colour information present." << endl;
-    }
-    else
-    {
+    //     cout << "Loaded " << filename << "." << endl;
+    //     if (noColour)
+    //         cout << "This file has no RGBA colour information present." << endl;
+    // }
+    // else
+    // {
         kinectGrabber = new OpenNIGrabber();
         if (kinectGrabber == 0)
             return false;
         boost::function<void (const PointCloud<PointXYZRGBA>::ConstPtr&)> f =
             boost::bind(&grabberCallback, _1);
         kinectGrabber->registerCallback(f);
-    }
+    //}
     
-    viewer = createViewer();
+    //viewer = createViewer();
     
-    if (justVisualize)
-    {
-        if (noColour)
-            viewer->showCloud(fallbackCloud);
-        else viewer->showCloud(cloudptr);
-    }
-    else kinectGrabber->start();
+    // if (justVisualize)
+    // {
+    //     if (noColour)
+    //         viewer->showCloud(fallbackCloud);
+    //     else viewer->showCloud(cloudptr);
+    // }
+    // else 
+        saveCloud = true;
+        kinectGrabber->start();
     
-    while (! viewer->wasStopped())
+    while (true)
         boost::this_thread::sleep(boost::posix_time::seconds(1));
     
     if (! justVisualize)
