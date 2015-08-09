@@ -15,6 +15,8 @@ using std::endl;
 static pcl::Grabber* kinectGrabber;
 static boost::shared_ptr<pcl::visualization::PCLVisualizer> _viewer;
 static std::mutex _mtx;  
+static bool saveCloud(false);
+static unsigned int filesSaved = 0;
 
 //Called every time there's a new frame 
 void
@@ -35,10 +37,41 @@ grabber_callback(const pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr& cloud)
     {
         _mtx.lock();
         _viewer->updatePointCloud(cloud,"samplecloud");
+        if (saveCloud)
+        {
+            std::stringstream stream;
+            stream << "inputCloud" << filesSaved << ".pcd";
+            std::string filename = stream.str();
+            if (pcl::io::savePCDFile(filename, *cloud, true) == 0)
+            {
+                filesSaved++;
+                cout << "Saved " << filename << "." << endl;
+            }
+            else PCL_ERROR("Problem saving %s.\n", filename.c_str());     
+            saveCloud = false;
+        }
         _mtx.unlock();    
     }
 
-     
+}
+
+void
+keyboardEventOccurred(const pcl::visualization::KeyboardEvent& event, void* nothing)
+{
+    if (event.getKeySym() == "space" && event.keyDown())
+    {
+        saveCloud = true;
+    }
+    else if (event.getKeySym() == "r" && event.keyDown())
+    {
+        _viewer->setCameraPosition(0,0,-1,0,0,1,0,-1,0); 
+        std::cout << "Camera viewpoint reset" << std::endl;
+    } 
+    // else if(event.keyDown())
+    // {
+    //     std::cout << "key pressed: " <<event.getKeySym() << std::endl;
+    // }
+    
 
 }
 
@@ -51,9 +84,10 @@ create_viewer()
     viewer->addCoordinateSystem (1.0);
     viewer->initCameraParameters ();
     viewer->setCameraPosition(0,0,-1,0,0,1,0,-1,0); 
-
+    viewer->registerKeyboardCallback(keyboardEventOccurred);
     return (viewer);    
 } 
+
 
 
 int
