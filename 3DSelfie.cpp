@@ -15,7 +15,6 @@ using std::endl;
 static pcl::Grabber* kinectGrabber;
 static boost::shared_ptr<pcl::visualization::PCLVisualizer> _viewer;
 static std::mutex _mtx;  
-std::vector<pcl::visualization::Camera> cam; 
 
 //Called every time there's a new frame 
 void
@@ -36,14 +35,9 @@ grabber_callback(const pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr& cloud)
     {
         _mtx.lock();
         _viewer->updatePointCloud(cloud,"samplecloud");
-        _viewer->getCameras(cam); 
         _mtx.unlock();    
     }
 
-    cout << "Cam: " << endl 
-             << " - pos: (" << cam[0].pos[0] << ", "    << cam[0].pos[1] << ", "    << cam[0].pos[2] << ")" << endl 
-             << " - view: ("    << cam[0].view[0] << ", "   << cam[0].view[1] << ", "   << cam[0].view[2] << ")"    << endl 
-             << " - focal: ("   << cam[0].focal[0] << ", "  << cam[0].focal[1] << ", "  << cam[0].focal[2] << ")"   << endl;
      
 
 }
@@ -53,11 +47,11 @@ boost::shared_ptr<pcl::visualization::PCLVisualizer>
 create_viewer()
 {
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
-    viewer->setBackgroundColor (0, 0, 0);
+    viewer->setBackgroundColor (0.21, 0.27, 0.22);
     viewer->addCoordinateSystem (1.0);
     viewer->initCameraParameters ();
-    viewer->setCameraPosition(0,0,-1,0,-1,0,0,0,1); 
-    viewer->getCameras(cam); 
+    viewer->setCameraPosition(0,0,-1,0,0,1,0,-1,0); 
+
     return (viewer);    
 } 
 
