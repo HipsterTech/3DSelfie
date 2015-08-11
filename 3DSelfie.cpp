@@ -40,7 +40,10 @@ grabber_callback(const pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr& cloud)
         if (saveCloud)
         {
             std::stringstream stream;
-            stream << "/Users/ccrespo/Documents/workspacePCL/3DSelfie/build/inputCloud" << filesSaved << ".pcd";
+            //mac
+            stream << "../../../inputCloud" << filesSaved << ".pcd";
+            //linux
+            //stream << "inputCloud" << filesSaved << ".pcd";
             std::string filename = stream.str();
             if (pcl::io::savePCDFile(filename, *cloud, true) == 0)
             {
