@@ -40,7 +40,7 @@ grabber_callback(const pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr& cloud)
         if (saveCloud)
         {
             std::stringstream stream;
-            stream << "inputCloud" << filesSaved << ".pcd";
+            stream << "/Users/ccrespo/Documents/workspacePCL/3DSelfie/build/inputCloud" << filesSaved << ".pcd";
             std::string filename = stream.str();
             if (pcl::io::savePCDFile(filename, *cloud, true) == 0)
             {
@@ -67,10 +67,10 @@ keyboardEventOccurred(const pcl::visualization::KeyboardEvent& event, void* noth
         _viewer->setCameraPosition(0,0,-1,0,0,1,0,-1,0); 
         std::cout << "Camera viewpoint reset" << std::endl;
     } 
-    // else if(event.keyDown())
-    // {
-    //     std::cout << "key pressed: " <<event.getKeySym() << std::endl;
-    // }
+     else if(event.keyDown())
+     {
+         std::cout << "key pressed: " <<event.getKeySym() << std::endl;
+     }
     
 
 }
