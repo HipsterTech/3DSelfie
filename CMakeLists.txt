@@ -12,7 +12,7 @@ if(UNIX)
 endif()
 
 find_package(PCL 1.2 REQUIRED)
-find_package(OpenCV REQUIRED core highgui imgproc)
+find_package(OpenCV REQUIRED core highgui imgproc xfeatures2d)
 
 include_directories(${PCL_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
