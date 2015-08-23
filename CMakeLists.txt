@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+
 project(3DSelfie)
 
 if(UNIX)
@@ -7,14 +12,18 @@ if(UNIX)
 endif()
 
 find_package(PCL 1.2 REQUIRED)
+find_package(OpenCV REQUIRED core highgui imgproc)
 
-include_directories(${PCL_INCLUDE_DIRS})
+include_directories(${PCL_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 
 add_definitions(${PCL_DEFINITIONS})
-if(APPLE)
-	add_executable (3DSelfie MACOSX_BUNDLE 3DSelfie.cpp)
-else()
-	add_executable (3DSelfie  3DSelfie.cpp)
-endif()
-target_link_libraries (3DSelfie ${PCL_LIBRARIES})
+
+
+
+
+add_executable (3DSelfie src/3DSelfie.cpp)
+target_link_libraries (3DSelfie ${PCL_LIBRARIES} ${OpenCV_LIBS})
+
+#add_executable (ht_icp_check src/tools/ht_icp_check.cpp)
+#target_link_libraries (ht_icp_check ${PCL_LIBRARIES} ${PCL_IO_LIBRARIES})
