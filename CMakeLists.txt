@@ -6,6 +6,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 
 project(3DSelfie)
+
+if(UNIX)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=gnu++0x")
+endif()
+
 find_package(PCL 1.2 REQUIRED)
 find_package(OpenCV REQUIRED core highgui imgproc)
 
