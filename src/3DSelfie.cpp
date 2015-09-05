@@ -13,6 +13,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/xfeatures2d/nonfree.hpp>
 
 using std::cout;
 using std::endl;
@@ -44,7 +45,10 @@ grabber_callback_img(const openni_wrapper::Image::ConstPtr& img)
     static bool first = true;
     static unsigned w;
     static unsigned h;
-    static cv::Mat mat, mat2;
+    static cv::Mat mat, mat2,mat3;
+    //static cv::SiftFeatureDetector detector;
+    static cv::Ptr<cv::xfeatures2d::SURF> surf = cv::xfeatures2d::SURF::create(); 
+    static std::vector<cv::KeyPoint> keypoints;
 
     if (first)
     {
@@ -53,13 +57,19 @@ grabber_callback_img(const openni_wrapper::Image::ConstPtr& img)
         mat = cv::Mat(h, w, CV_8UC3);
        first = false; 
     }     
-
-    //Convert to RGB
     img->fillRGB(w, h, mat.data);
-    cv::cvtColor(mat, mat2, CV_RGB2BGR);
+    cvtColor( mat, mat2, CV_RGB2GRAY );
+    surf->detect(mat2, keypoints);
+
+    // Add results to image and save.
+    
+    cv::drawKeypoints(mat2, keypoints, mat3);
+    //Convert to RGB
+    
+    //cv::cvtColor(mat, mat2, CV_RGB2BGR);
 
     //Display
-    cv::imshow( "Image Viewer", mat2);
+    cv::imshow( "Image Viewer", mat3);
 }
 
 //Called every time there's a new point cloudframe 
