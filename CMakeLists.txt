@@ -24,5 +24,5 @@ add_definitions(${PCL_DEFINITIONS})
 add_executable (3DSelfie src/3DSelfie.cpp)
 target_link_libraries (3DSelfie ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
-#add_executable (ht_icp_check src/tools/ht_icp_check.cpp)
-#target_link_libraries (ht_icp_check ${PCL_LIBRARIES} ${PCL_IO_LIBRARIES})
+add_executable (ht_icp_check src/tools/ht_icp_check.cpp)
+target_link_libraries (ht_icp_check ${PCL_LIBRARIES} ${PCL_IO_LIBRARIES})

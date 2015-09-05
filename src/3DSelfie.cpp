@@ -3,7 +3,8 @@
 
 #include <iostream>
 #include <mutex>
-// #include <algorithm>
+#include <vector>
+#include <algorithm>
 
 #include <pcl/io/openni_grabber.h>
 #include <pcl/io/pcd_io.h>
@@ -21,7 +22,20 @@ static pcl::OpenNIGrabber* kinectGrabber;
 static boost::shared_ptr<pcl::visualization::PCLVisualizer> _viewer;
 static std::mutex _mtx;  
 
-static 
+std::vector<pcl::PointXYZRGBA>
+find_3D_point(const std::vector<cv::Point> &pts, const pcl::PointCloud<pcl::PointXYZRGBA> &pc)
+{   
+    std::vector<pcl::PointXYZRGBA> out;
+
+    for(auto pt2d = pts.begin() ; pt2d != pts.end(); ++pt2d)
+    {
+        for(auto pt3d = pc.begin() ; pt3d != pc.end(); ++pt3d)
+        {
+            // if(pt2d->x == pt3D->
+        }
+    }
+    return out;
+}
 
 //Called every time there's a new image
 void
