@@ -9,12 +9,18 @@
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
 
-//Globals ^^ 
+//Point clouds
 static PointCloudT::Ptr cld_in(new PointCloudT), 
-    cld_org(new PointCloudT), cld_icp(new PointCloudT);//
+    cld_org(new PointCloudT), cld_icp(new PointCloudT);
+
+//Visualization window
 static pcl::visualization::PCLVisualizer viewer("HipsterTech ICP Check");
 static int v1 (0), v2 (1);
+
+//Icp object
 static pcl::IterativeClosestPoint<PointT, PointT> icp;
+static unsigned int period = 40;
+
 
 
 //Sets up everything related to visualization
@@ -60,15 +66,20 @@ icp_setup()
     icp.setInputSource (cld_icp);
     icp.setInputTarget (cld_in);
     icp.align (*cld_icp);
-    // // Set the max correspondence distance to 5cm (e.g., correspondences with higher distances will be ignored)
-    // //Should be related to scale of both pieces.
-    // icp.setMaxCorrespondenceDistance (0.05);
-    // // Set the maximum number of iterations (criterion 1)
-    // icp.setMaximumIterations (50);
-    // // Set the transformation epsilon (criterion 2)
-    // icp.setTransformationEpsilon (1e-8);
-    // // Set the euclidean distance difference epsilon (criterion 3)
-    // icp.setEuclideanFitnessEpsilon (1);
+}
+
+/*
+*   reset_alignment()
+*   Invoked periodically to visually the loop again. 
+*/
+void
+reset_alignment()
+{
+    *cld_icp = *cld_org;
+    pcl::visualization::PointCloudColorHandlerCustom<PointT> 
+                cld_icp_color_h (cld_icp, 180, 20, 20); 
+            cout << "Converged - Error: " << icp.getFitnessScore() << endl;
+    viewer.updatePointCloud (cld_icp, cld_icp_color_h, "cld_icp_v2");
 }
 
 int
@@ -97,6 +108,19 @@ main(int argc, char const *argv[])
 	std::cout << "Loaded file " << argv[1] << " (" << cld_in->size() 
 		<< " points) in " << time.toc() << " ms" << std::endl;
 
+    // Defining a rotation matrix and translation vector
+    Eigen::Matrix4d transformation_matrix = Eigen::Matrix4d::Identity ();
+
+    // A rotation matrix (see https://en.wikipedia.org/wiki/Rotation_matrix)
+    double theta = M_PI / 8;  // The angle of rotation in radians
+    transformation_matrix (0, 0) = cos (theta);
+    transformation_matrix (0, 1) = -sin (theta);
+    transformation_matrix (1, 0) = sin (theta);
+    transformation_matrix (1, 1) = cos (theta);
+
+    // A translation on Z axis (0.4 meters)
+    transformation_matrix (2, 3) = 0.4;
+
     /* Test for 2nd possible file */
     if(argc > 2)
     {
@@ -108,22 +132,12 @@ main(int argc, char const *argv[])
         }
         std::cout << "Loaded file " << argv[2] << " (" << cld_org->size() 
         << " points) in " << time.toc() << " ms" << std::endl;
+
+        // Executing the transformation
+        // pcl::transformPointCloud (*cld_org, *cld_org, transformation_matrix);
     }
     else
     {
-        // Defining a rotation matrix and translation vector
-        Eigen::Matrix4d transformation_matrix = Eigen::Matrix4d::Identity ();
-
-        // A rotation matrix (see https://en.wikipedia.org/wiki/Rotation_matrix)
-        double theta = M_PI / 8;  // The angle of rotation in radians
-        transformation_matrix (0, 0) = cos (theta);
-        transformation_matrix (0, 1) = -sin (theta);
-        transformation_matrix (1, 0) = sin (theta);
-        transformation_matrix (1, 1) = cos (theta);
-
-        // A translation on Z axis (0.4 meters)
-        transformation_matrix (2, 3) = 0.4;
-
         // Display in terminal the transformation matrix
         std::cout << "Applying rigid transformation to: cld_in -> cld_icp" << std::endl;
 
@@ -140,6 +154,9 @@ main(int argc, char const *argv[])
     /* ICP Setup */
     icp_setup();
 
+    /* Star the clock */
+    time.tic();
+
 	/* Window loop */
 	while (!viewer.wasStopped ())
 	{
@@ -151,6 +168,12 @@ main(int argc, char const *argv[])
             cout << "Converged - Error: " << icp.getFitnessScore() << endl;
             viewer.updatePointCloud (cld_icp, cld_icp_color_h, "cld_icp_v2");
             icp.align (*cld_icp);
+        }
+
+        if (time.toc() >= period * 1000)
+        {
+            reset_alignment();
+            time.tic();
         }
         viewer.spinOnce ();
 	}
