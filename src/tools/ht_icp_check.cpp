@@ -19,7 +19,7 @@ static int v1 (0), v2 (1);
 
 //Icp object
 static pcl::IterativeClosestPoint<PointT, PointT> icp;
-static unsigned int period = 40;
+static unsigned int period = 4000;
 
 
 
@@ -63,9 +63,14 @@ void
 icp_setup()
 {
     icp.setMaximumIterations (1);
+    icp.setMaxCorrespondenceDistance(0.05);
     icp.setInputSource (cld_icp);
     icp.setInputTarget (cld_in);
     icp.align (*cld_icp);
+
+    //Attempting to set some RANSAC thing
+    // icp.setRANSACIterations(100000);
+    // icp.setRANSACOutlierRejectionThreshold(0.001);
 }
 
 /*
@@ -134,7 +139,7 @@ main(int argc, char const *argv[])
         << " points) in " << time.toc() << " ms" << std::endl;
 
         // Executing the transformation
-        // pcl::transformPointCloud (*cld_org, *cld_org, transformation_matrix);
+        pcl::transformPointCloud (*cld_org, *cld_org, transformation_matrix);
     }
     else
     {
