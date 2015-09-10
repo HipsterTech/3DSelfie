@@ -6,7 +6,7 @@
 #include <pcl/registration/icp.h>
 
 //Setting up a point cloud type
-typedef pcl::PointXYZ PointT;
+typedef pcl::PointXYZRGBA PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
 
 //Point clouds
@@ -21,7 +21,33 @@ static int v1 (0), v2 (1);
 static pcl::IterativeClosestPoint<PointT, PointT> icp;
 static unsigned int period = 4000;
 
+/*
+*   check_color(const PointCloudT &cloud)
+*   Checks if the cloud color information. The function that if the entire
+*   cloud is black with alpha set to 255, then there's no color info.
+*   Returns true if there is color info, false otherwise
+*   
+*   To unpack each component:
+*   cout << "R: " << ((p->rgba >> 16) & 0xff) 
+        << " G: " << ((p->rgba >> 8) & 0xff) 
+        << " B: " << ((p->rgba) & 0xff) 
+        << " A: " << ((p->rgba >> 24) & 0xff) << endl;
+*/
+bool
+check_color(const PointCloudT &cloud)
+{
+    uint32_t color;
 
+    if(cloud.empty())
+        return false;
+
+    color =  ((uint32_t)255 << 24);
+    for (auto p = cloud.points.begin(); p != cloud.points.end(); ++p)
+        if(p->rgba != color)
+            return true;    
+        
+    return false;
+}
 
 //Sets up everything related to visualization
 void
@@ -35,20 +61,28 @@ visualization_setup()
     viewer.setBackgroundColor (1.0, 1.0, 1.0, v1);
     viewer.setBackgroundColor (1.0, 1.0, 1.0, v2);
 
-    // Set the point cloud color handlers
-    pcl::visualization::PointCloudColorHandlerCustom<PointT> 
-        cld_in_color_h (cld_in, 0, 0,0); 
-    pcl::visualization::PointCloudColorHandlerCustom<PointT> 
-        cld_org_color_h (cld_org, 20, 180, 20); 
-    pcl::visualization::PointCloudColorHandlerCustom<PointT> 
-        cld_icp_color_h (cld_icp, 180, 20, 20);  
+    // Color Handling
+    viewer.addPointCloud (cld_in, "cld_in_v1", v1);
+    viewer.addPointCloud (cld_in, "cld_in_v2", v2);
 
-    /* Add point clouds to viewports */
-    viewer.addPointCloud (cld_in, cld_in_color_h, "cld_in_v1", v1);
-    viewer.addPointCloud (cld_org, cld_org_color_h, "cld_org_v1", v1);
-    viewer.addPointCloud (cld_in, cld_in_color_h, "cld_in_v2", v2);
-    viewer.addPointCloud (cld_icp, cld_icp_color_h, "cld_icp_v2", v2);
+    if(!check_color(*cld_org))
+    {
+        pcl::visualization::PointCloudColorHandlerCustom<PointT> 
+            cld_org_color_h (cld_org, 20, 180, 20); 
+        viewer.addPointCloud (cld_org, cld_org_color_h, "cld_org_v1", v1);
+    } 
+    else
+        viewer.addPointCloud (cld_org, "cld_org_v1", v1);
 
+    if(!check_color(*cld_icp))
+    {
+        pcl::visualization::PointCloudColorHandlerCustom<PointT> 
+            cld_icp_color_h (cld_icp, 180, 20, 20);
+        viewer.addPointCloud (cld_icp, cld_icp_color_h, "cld_icp_v2", v2);
+    } 
+    else
+        viewer.addPointCloud (cld_icp, "cld_icp_v2", v2);
+    
      // Set camera position and orientation
     viewer.initCameraParameters ();
     viewer.setSize (1280, 720);
@@ -91,6 +125,7 @@ int
 main(int argc, char const *argv[])
 {
 	pcl::console::TicToc time;
+    bool cld_has_color;
 	
 
 	/* Parse arguments */
@@ -147,7 +182,7 @@ main(int argc, char const *argv[])
         std::cout << "Applying rigid transformation to: cld_in -> cld_icp" << std::endl;
 
         // Executing the transformation
-        pcl::transformPointCloud (*cld_in, *cld_org, transformation_matrix);
+        // pcl::transformPointCloud (*cld_in, *cld_org, transformation_matrix);
     }
 
     //Initialize the icp cloud
@@ -162,16 +197,26 @@ main(int argc, char const *argv[])
     /* Star the clock */
     time.tic();
 
+    /* Check if cloud has color */
+    cld_has_color = check_color(*cld_icp);
+
 	/* Window loop */
 	while (!viewer.wasStopped ())
 	{
         // cout << "Rendering" << endl;
         if (icp.hasConverged())
         {
-            pcl::visualization::PointCloudColorHandlerCustom<PointT> 
+            if(cld_has_color)
+            {
+                viewer.updatePointCloud (cld_icp, "cld_icp_v2");    
+            }
+            else
+            {
+                pcl::visualization::PointCloudColorHandlerCustom<PointT> 
                 cld_icp_color_h (cld_icp, 180, 20, 20); 
+                viewer.updatePointCloud (cld_icp, cld_icp_color_h, "cld_icp_v2");    
+            }
             cout << "Converged - Error: " << icp.getFitnessScore() << endl;
-            viewer.updatePointCloud (cld_icp, cld_icp_color_h, "cld_icp_v2");
             icp.align (*cld_icp);
         }
 
