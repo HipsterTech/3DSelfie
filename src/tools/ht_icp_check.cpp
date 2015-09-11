@@ -4,6 +4,7 @@
 #include <pcl/io/auto_io.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/registration/icp.h>
+#include <pcl/filters/filter.h>
 
 //Setting up a point cloud type
 typedef pcl::PointXYZRGBA PointT;
@@ -97,7 +98,7 @@ void
 icp_setup()
 {
     icp.setMaximumIterations (1);
-    icp.setMaxCorrespondenceDistance(0.05);
+    // icp.setMaxCorrespondenceDistance(0.05);
     icp.setInputSource (cld_icp);
     icp.setInputTarget (cld_in);
     icp.align (*cld_icp);
@@ -126,7 +127,7 @@ main(int argc, char const *argv[])
 {
 	pcl::console::TicToc time;
     bool cld_has_color;
-	
+	std::vector<int> nan_idx;
 
 	/* Parse arguments */
 	if (argc < 2)
@@ -145,6 +146,7 @@ main(int argc, char const *argv[])
 		PCL_ERROR ("Error loading cloud %s.\n", argv[1]);
     	return -1;
 	}
+    pcl::removeNaNFromPointCloud(*cld_in, *cld_in, nan_idx);
 	std::cout << "Loaded file " << argv[1] << " (" << cld_in->size() 
 		<< " points) in " << time.toc() << " ms" << std::endl;
 
@@ -170,6 +172,7 @@ main(int argc, char const *argv[])
             PCL_ERROR ("Error loading cloud %s.\n", argv[2]);
             return -1;
         }
+        pcl::removeNaNFromPointCloud(*cld_org, *cld_org, nan_idx);
         std::cout << "Loaded file " << argv[2] << " (" << cld_org->size() 
         << " points) in " << time.toc() << " ms" << std::endl;
 
