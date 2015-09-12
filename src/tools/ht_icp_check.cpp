@@ -1,4 +1,8 @@
 #include <iostream>
+#include <thread>
+#include <mutex>
+#include <chrono>
+
 #include <pcl/console/print.h>
 #include <pcl/console/time.h>
 #include <pcl/io/auto_io.h>
@@ -20,7 +24,10 @@ static int v1 (0), v2 (1);
 
 //Icp object
 static pcl::IterativeClosestPoint<PointT, PointT> icp;
-static unsigned int period = 4000;
+static unsigned int period = 40000;
+
+//Mutex to handle access to the point cloud inside the viewer.
+static std::mutex _mtx;
 
 /*
 *   check_color(const PointCloudT &cloud)
@@ -101,7 +108,6 @@ icp_setup()
     // icp.setMaxCorrespondenceDistance(0.05);
     icp.setInputSource (cld_icp);
     icp.setInputTarget (cld_in);
-    icp.align (*cld_icp);
 
     //Attempting to set some RANSAC thing
     // icp.setRANSACIterations(100000);
@@ -118,15 +124,57 @@ reset_alignment()
     *cld_icp = *cld_org;
     pcl::visualization::PointCloudColorHandlerCustom<PointT> 
                 cld_icp_color_h (cld_icp, 180, 20, 20); 
-            cout << "Converged - Error: " << icp.getFitnessScore() << endl;
+    _mtx.lock();
     viewer.updatePointCloud (cld_icp, cld_icp_color_h, "cld_icp_v2");
+    _mtx.unlock();
+}
+
+//Align parallel thread
+void
+compute_align(const bool color)
+{
+    pcl::console::TicToc time;
+    pcl::visualization::PointCloudColorHandlerCustom<PointT> cld_icp_color_h (cld_icp, 180, 20, 20); 
+    double delta_time = 0;
+    double time_ctr = 0;
+
+    while(!viewer.wasStopped())
+    {
+
+        time.tic();
+        icp.align (*cld_icp);
+    
+        if (icp.hasConverged())
+        {    
+            _mtx.lock();
+
+            if(color)
+                viewer.updatePointCloud (cld_icp, "cld_icp_v2");    
+            else
+                viewer.updatePointCloud (cld_icp, cld_icp_color_h, "cld_icp_v2");    
+
+            _mtx.unlock();
+            delta_time = time.toc();
+            time_ctr += delta_time;    
+        }
+
+        cout << "Updated in: " << delta_time << " ms. Converged: " 
+            << icp.hasConverged() << ". Error: " 
+            << icp.getFitnessScore() << endl;
+
+        if (time_ctr >= period * 1000)
+        {
+            reset_alignment();
+            time_ctr = 0;
+            cout << "Resetting alignment." << endl;
+        }
+    }
 }
 
 int
 main(int argc, char const *argv[])
 {
-	pcl::console::TicToc time;
-    bool cld_has_color;
+    pcl::console::TicToc time;
 	std::vector<int> nan_idx;
 
 	/* Parse arguments */
@@ -197,39 +245,18 @@ main(int argc, char const *argv[])
     /* ICP Setup */
     icp_setup();
 
-    /* Star the clock */
-    time.tic();
-
-    /* Check if cloud has color */
-    cld_has_color = check_color(*cld_icp);
+    /* Spawn computational thread */
+    std::thread align_thread(compute_align, check_color(*cld_icp));
 
 	/* Window loop */
 	while (!viewer.wasStopped ())
 	{
-        // cout << "Rendering" << endl;
-        if (icp.hasConverged())
-        {
-            if(cld_has_color)
-            {
-                viewer.updatePointCloud (cld_icp, "cld_icp_v2");    
-            }
-            else
-            {
-                pcl::visualization::PointCloudColorHandlerCustom<PointT> 
-                cld_icp_color_h (cld_icp, 180, 20, 20); 
-                viewer.updatePointCloud (cld_icp, cld_icp_color_h, "cld_icp_v2");    
-            }
-            cout << "Converged - Error: " << icp.getFitnessScore() << endl;
-            icp.align (*cld_icp);
-        }
-
-        if (time.toc() >= period * 1000)
-        {
-            reset_alignment();
-            time.tic();
-        }
+        _mtx.lock();
         viewer.spinOnce ();
+        _mtx.unlock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
+    align_thread.join();
 	return 0;
 }
