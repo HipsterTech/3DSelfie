@@ -27,18 +27,19 @@ endif(NOT PCL_HAS_AUTO_IO)
 unset(CMAKE_REQUIRED_FLAGS)
 unset(CMAKE_REQUIRED_INCLUDES)
 
-
+# Check for latest opencv
 find_package(OpenCV 3 COMPONENTS core highgui imgproc xfeatures2d)
 if(OpenCV_FOUND)
 	include_directories(${OpenCV_INCLUDE_DIRS})
-
 	add_executable (3DSelfie src/3DSelfie.cpp)
 	target_link_libraries (3DSelfie ${PCL_LIBRARIES} ${OpenCV_LIBS})	
 endif(OpenCV_FOUND)
 
-
-add_executable (ht_icp_check src/tools/ht_icp_check/ht_icp_check.cpp)
-target_link_libraries (ht_icp_check ${PCL_LIBRARIES} ${PCL_IO_LIBRARIES})
+#Add target only if pcl is patched
+if(PCL_HAS_AUTO_IO)
+	add_executable (ht_icp_check src/tools/ht_icp_check/ht_icp_check.cpp)
+	target_link_libraries (ht_icp_check ${PCL_LIBRARIES} ${PCL_IO_LIBRARIES})
+endif(PCL_HAS_AUTO_IO)
 
 #Final Summary
 message(" Modules that will be built: ")
