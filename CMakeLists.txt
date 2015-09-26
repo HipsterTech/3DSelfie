@@ -17,46 +17,49 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-#Be sure that we have the patched tree so that we can use smart file loader
-set(CMAKE_REQUIRED_FLAGS ${Boost_SYSTEM_LIBRARY_DEBUG})
-set(CMAKE_REQUIRED_INCLUDES ${PCL_INCLUDE_DIRS} ${EIGEN_INCLUDE_DIRS})
-CHECK_INCLUDE_FILE_CXX(pcl/io/auto_io.h PCL_HAS_AUTO_IO)
-if(NOT PCL_HAS_AUTO_IO)
-	message("Please patch with pull request https://github.com/PointCloudLibrary/pcl/pull/1294")
-endif(NOT PCL_HAS_AUTO_IO)
-unset(CMAKE_REQUIRED_FLAGS)
-unset(CMAKE_REQUIRED_INCLUDES)
-
-# Check for latest opencv
+# Dependencies for 3DSelfie
+#OpenCV
 find_package(OpenCV 3 COMPONENTS core highgui imgproc xfeatures2d)
 if(OpenCV_FOUND)
 	include_directories(${OpenCV_INCLUDE_DIRS})
 	add_executable (3DSelfie src/3DSelfie.cpp)
 	target_link_libraries (3DSelfie ${PCL_LIBRARIES} ${OpenCV_LIBS})	
+else()
+	message("OpenCV3 not found. Disabling 3DSelfie.")
 endif(OpenCV_FOUND)
+#OpenNI 
+if(NOT OPENNI_FOUND)
+	message("OpenNI not found. Disabling 3DSelfie.")
+endif(NOT OPENNI_FOUND)
 
-#Add target only if pcl is patched
+# Dependencies for ht_icp_check
+# Infamous pull request https://github.com/PointCloudLibrary/pcl/pull/1294
+set(CMAKE_REQUIRED_FLAGS ${Boost_SYSTEM_LIBRARY_DEBUG})
+set(CMAKE_REQUIRED_INCLUDES ${PCL_INCLUDE_DIRS} ${EIGEN_INCLUDE_DIRS})
+CHECK_INCLUDE_FILE_CXX(pcl/io/auto_io.h PCL_HAS_AUTO_IO)
 if(PCL_HAS_AUTO_IO)
 	add_executable (ht_icp_check src/tools/ht_icp_check/ht_icp_check.cpp)
 	target_link_libraries (ht_icp_check ${PCL_LIBRARIES} ${PCL_IO_LIBRARIES})
+else()
+	message("Please patch with pull request https://github.com/PointCloudLibrary/pcl/pull/1294")
 endif(PCL_HAS_AUTO_IO)
+unset(CMAKE_REQUIRED_FLAGS)
+unset(CMAKE_REQUIRED_INCLUDES)
 
 #Final Summary
-message(" Modules that will be built: ")
-message("")
-if(OpenCV_FOUND)
-	message("\t3DSelfie")
-endif(OpenCV_FOUND)
-if(PCL_HAS_AUTO_IO)
-	message("\tht_icp_check")
-endif(PCL_HAS_AUTO_IO)
-message("")
+message("\nModules that will be built:\n")
 
-message(" Modules that will NOT be built: ")
-message("")
-if(NOT OpenCV_FOUND)
-	message("\t3DSelfie")
-endif(NOT OpenCV_FOUND)
+if(OpenCV_FOUND AND OPENNI_FOUND)
+	message("\t- 3DSelfie")
+endif(OpenCV_FOUND AND OPENNI_FOUND)
+if(PCL_HAS_AUTO_IO)
+	message("\t- ht_icp_check")
+endif(PCL_HAS_AUTO_IO)
+
+message("\nModules that will NOT be built:\n")
+if(NOT (OpenCV_FOUND AND OPENNI_FOUND))
+	message("\t- 3DSelfie")
+endif(NOT (OpenCV_FOUND AND OPENNI_FOUND))
 if(NOT PCL_HAS_AUTO_IO)
-	message("\tht_icp_check")
+	message("\t- ht_icp_check")
 endif(NOT PCL_HAS_AUTO_IO)
