@@ -2,6 +2,7 @@
 #include <thread>
 #include <mutex>
 #include <chrono>
+#include <cmath>
 
 #include <pcl/console/print.h>
 #include <pcl/console/time.h>
@@ -9,6 +10,8 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/registration/icp.h>
 #include <pcl/filters/filter.h>
+
+#include <boost/program_options.hpp>
 
 //Setting up a point cloud type
 typedef pcl::PointXYZRGBA PointT;
@@ -19,12 +22,14 @@ static PointCloudT::Ptr cld_in(new PointCloudT),
     cld_org(new PointCloudT), cld_icp(new PointCloudT);
 
 //Visualization window
-static pcl::visualization::PCLVisualizer viewer("HipsterTech ICP Check");
+// static pcl::visualization::PCLVisualizer viewer("HipsterTech ICP Check");
+static pcl::visualization::PCLVisualizer *viewer;
 static int v1 (0), v2 (1);
 
 //Icp object
 static pcl::IterativeClosestPoint<PointT, PointT> icp;
-static unsigned int period = 40000;
+static double max_dist;
+static unsigned int period;
 
 //Mutex to handle access to the point cloud inside the viewer.
 static std::mutex _mtx;
@@ -61,42 +66,45 @@ check_color(const PointCloudT &cloud)
 void
 visualization_setup()
 {
+    // Create window
+    viewer = new pcl::visualization::PCLVisualizer("HipsterTech ICP Check");
+
     // Create two verticaly separated viewports
-    viewer.createViewPort (0.0, 0.0, 0.5, 1.0, v1);
-    viewer.createViewPort (0.5, 0.0, 1.0, 1.0, v2);
+    viewer->createViewPort (0.0, 0.0, 0.5, 1.0, v1);
+    viewer->createViewPort (0.5, 0.0, 1.0, 1.0, v2);
 
     // Set background color
-    viewer.setBackgroundColor (1.0, 1.0, 1.0, v1);
-    viewer.setBackgroundColor (1.0, 1.0, 1.0, v2);
+    viewer->setBackgroundColor (1.0, 1.0, 1.0, v1);
+    viewer->setBackgroundColor (1.0, 1.0, 1.0, v2);
 
     // Color Handling
-    viewer.addPointCloud (cld_in, "cld_in_v1", v1);
-    viewer.addPointCloud (cld_in, "cld_in_v2", v2);
+    viewer->addPointCloud (cld_in, "cld_in_v1", v1);
+    viewer->addPointCloud (cld_in, "cld_in_v2", v2);
 
     if(!check_color(*cld_org))
     {
         pcl::visualization::PointCloudColorHandlerCustom<PointT> 
             cld_org_color_h (cld_org, 20, 180, 20); 
-        viewer.addPointCloud (cld_org, cld_org_color_h, "cld_org_v1", v1);
+        viewer->addPointCloud (cld_org, cld_org_color_h, "cld_org_v1", v1);
     } 
     else
-        viewer.addPointCloud (cld_org, "cld_org_v1", v1);
+        viewer->addPointCloud (cld_org, "cld_org_v1", v1);
 
     if(!check_color(*cld_icp))
     {
         pcl::visualization::PointCloudColorHandlerCustom<PointT> 
             cld_icp_color_h (cld_icp, 180, 20, 20);
-        viewer.addPointCloud (cld_icp, cld_icp_color_h, "cld_icp_v2", v2);
+        viewer->addPointCloud (cld_icp, cld_icp_color_h, "cld_icp_v2", v2);
     } 
     else
-        viewer.addPointCloud (cld_icp, "cld_icp_v2", v2);
+        viewer->addPointCloud (cld_icp, "cld_icp_v2", v2);
     
      // Set camera position and orientation
-    viewer.initCameraParameters ();
-    viewer.setSize (1280, 720);
-    viewer.setCameraPosition (0.0, -4.0, 0, 
+    viewer->initCameraParameters ();
+    viewer->setSize (1280, 720);
+    viewer->setCameraPosition (0.0, -4.0, 0, 
         0.0, 0.0, 0.0,  0.0, 0.0, 1.0,  v1);
-    viewer.setCameraPosition (0.0, -4.0, 0, 
+    viewer->setCameraPosition (0.0, -4.0, 0, 
         0.0, 0.0, 0.0,  0.0, 0.0, 1.0,  v2);
 }
 
@@ -105,7 +113,7 @@ void
 icp_setup()
 {
     icp.setMaximumIterations (1);
-    // icp.setMaxCorrespondenceDistance(0.05);
+    icp.setMaxCorrespondenceDistance(max_dist);
     icp.setInputSource (cld_icp);
     icp.setInputTarget (cld_in);
 
@@ -125,7 +133,7 @@ reset_alignment()
     pcl::visualization::PointCloudColorHandlerCustom<PointT> 
                 cld_icp_color_h (cld_icp, 180, 20, 20); 
     _mtx.lock();
-    viewer.updatePointCloud (cld_icp, cld_icp_color_h, "cld_icp_v2");
+    viewer->updatePointCloud (cld_icp, cld_icp_color_h, "cld_icp_v2");
     _mtx.unlock();
 }
 
@@ -136,9 +144,11 @@ compute_align(const bool color)
     pcl::console::TicToc time;
     pcl::visualization::PointCloudColorHandlerCustom<PointT> cld_icp_color_h (cld_icp, 180, 20, 20); 
     double delta_time = 0;
-    double time_ctr = 0;
+    boost::posix_time::ptime period_start, period_end;
 
-    while(!viewer.wasStopped())
+    period_start = boost::posix_time::microsec_clock::local_time ();
+
+    while(!viewer->wasStopped())
     {
 
         time.tic();
@@ -149,26 +159,189 @@ compute_align(const bool color)
             _mtx.lock();
 
             if(color)
-                viewer.updatePointCloud (cld_icp, "cld_icp_v2");    
+                viewer->updatePointCloud (cld_icp, "cld_icp_v2");    
             else
-                viewer.updatePointCloud (cld_icp, cld_icp_color_h, "cld_icp_v2");    
+                viewer->updatePointCloud (cld_icp, cld_icp_color_h, "cld_icp_v2");    
 
             _mtx.unlock();
             delta_time = time.toc();
-            time_ctr += delta_time;    
         }
 
         cout << "Updated in: " << delta_time << " ms. Converged: " 
             << icp.hasConverged() << ". Error: " 
             << icp.getFitnessScore() << endl;
 
-        if (time_ctr >= period * 1000)
+        period_end = boost::posix_time::microsec_clock::local_time ();
+        if (period && 
+                (static_cast<double>((period_end - period_start).total_seconds())) 
+                    >= period)
         {
             reset_alignment();
-            time_ctr = 0;
+            period_start = period_end;
             cout << "Resetting alignment." << endl;
         }
     }
+}
+
+int
+parse_input_files(const boost::program_options::variables_map &vm)
+{
+    pcl::console::TicToc time;
+    std::vector<int> nan_idx;
+    std::vector<std::string> files;
+    
+    //No file inputs
+    if(!vm.count("input-file"))
+    {
+        cout << "Usage: ht_icp_check file1 [file2] [options]" << endl;
+        return -1;
+    }
+        
+
+    files = vm["input-file"].as< std::vector<std::string> >();
+
+    //At least one file was specified
+    time.tic();
+    if(pcl::io::load<PointT>(files[0], *cld_in) < 0)
+    {
+        PCL_ERROR ("Error loading cloud %s.\n", files[0].c_str());
+        return -1;
+    }
+    pcl::removeNaNFromPointCloud(*cld_in, *cld_in, nan_idx);
+    std::cout << "Loaded file " << files[0] << " (" << cld_in->size() 
+        << " points) in " << time.toc() << " ms" << std::endl;
+
+    //Deal with optional second file
+    if(files.size() < 1)
+    {
+        *cld_org = *cld_in;
+        return 0;
+    }
+
+    time.tic();
+    if(pcl::io::load<PointT>(files[1], *cld_org) < 0)
+    {
+        PCL_ERROR ("Error loading cloud %s.\n", files[1].c_str());
+        return -1;
+    }
+    pcl::removeNaNFromPointCloud(*cld_org, *cld_org, nan_idx);
+    std::cout << "Loaded file " << files[1] << " (" << cld_org->size() 
+    << " points) in " << time.toc() << " ms" << std::endl;
+
+    return 0;
+}
+
+int
+parse_transformations(const boost::program_options::variables_map &vm)
+{
+    bool trans(false), rot(false);
+    std::vector<float> vals;
+    Eigen::Matrix4d transformation_matrix(Eigen::Matrix4d::Identity());
+
+    //Test for valid transation
+    if (!vm["translate"].empty() && 
+            (vals = vm["translate"].as< std::vector<float> >()).size() == 3) {
+        transformation_matrix (0, 3) = vals[0];
+        transformation_matrix (1, 3) = vals[1];
+        transformation_matrix (2, 3) = vals[2];
+        trans = true;
+        cout << "t = [ " << vals[0] << " , " << vals[1] << " , "
+            << vals[2] << " ]" << endl;
+    }
+
+    //Test for valid transation
+    if (!vm["rotate"].empty() && 
+            (vals = vm["rotate"].as< std::vector<float> >()).size() == 4) {
+        Eigen::Vector3d k(vals[0], vals[1], vals[2]);
+        Eigen::Matrix3d K, R;
+        double angle = vals[3] * M_PI / 180.0;
+        
+        k.normalize();
+        K << 0,     -k(2),  k(1), 
+            k(2),   0,      -k(0),
+            -k(1),  k(0),   0;
+
+        R = Eigen::Matrix3d::Identity() + std::sin(angle) * K 
+            + (1 - std::cos(angle)) * K * K;
+        transformation_matrix.topLeftCorner<3,3>() = R;
+        rot = true;
+        cout << "R = " << endl << R << endl;
+    }
+
+    // Apply transformation if needed
+    if(trans || rot)
+        pcl::transformPointCloud (*cld_org, *cld_org, transformation_matrix);
+
+    return 0;
+}
+
+int
+parse_console_arguments(const int argc, const char **argv)
+{
+    boost::program_options::options_description desc("Allowed Options");
+    boost::program_options::variables_map vm;
+    boost::program_options::positional_options_description p;
+
+
+    //Compose allowed options list
+    desc.add_options()
+        ("help", "produce help message")
+        ("input-file", boost::program_options::value< std::vector<std::string> >(), 
+            "input file(s) with point cloud")
+        ("loop", boost::program_options::value<unsigned int>(&period)->default_value(0), 
+            "set loop period t in s. If t equals 0, no loop takes place.")
+        ("max-dist", boost::program_options::value<double>(&max_dist)->
+            default_value(std::sqrt(std::numeric_limits<double>::max())), 
+            "maximum correspondence distance")
+        ("rotate", boost::program_options::value<std::vector<float> >()->multitoken(), 
+            "rotation to be applied to second point cloud before icp. Rotation of angle "
+            "(degrees) over vector v. --rotate vx vy vz angled")
+        ("translate", boost::program_options::value<std::vector<float> >()->multitoken(), 
+            "translation to be applied to second point cloud before icp. --translate tx ty tz")
+        ;
+    //Set positional options
+    p.add("input-file", -1);
+
+    try
+    {
+        //Parse commmand line and map values
+        boost::program_options::store(
+            boost::program_options::command_line_parser(argc, argv).options(desc)
+            .style(boost::program_options::command_line_style::unix_style ^
+                boost::program_options::command_line_style::allow_short)
+            .positional(p).run(), vm);
+        boost::program_options::notify(vm);
+    }
+    catch(const boost::program_options::error &ex)
+    {
+        cout << ex.what() << endl;
+        return -1;
+    }
+
+    //print help description
+    if (vm.count("help")) {
+        cout << "Usage: ht_icp_check file1 [file2] [options]" << endl;
+        cout << desc << "\n";
+        return -1;
+    }
+
+    //parse loop description
+    if (period)
+        cout << "Loop period set to " << period << " s" << endl;
+
+    //parse max correspondece dist
+    if(max_dist < std::sqrt(std::numeric_limits<double>::max()))
+        cout << "Maximum Correspondence Distance set to " << max_dist << endl;
+
+    //parse file inputs
+    if(parse_input_files(vm))
+        return -1;
+
+    //parse tranformations
+    if(parse_transformations(vm))
+        return -1;
+
+    return 0;
 }
 
 int
@@ -178,63 +351,8 @@ main(int argc, char const *argv[])
 	std::vector<int> nan_idx;
 
 	/* Parse arguments */
-	if (argc < 2)
-	{
-		std::cout << "Usage :" << std::endl
-			<< argv[0] << " <file> [number_of_ICP_iterations]" 
-			<< std::endl;
-    	PCL_ERROR ("Provide one mesh file.\n");
-    	return -1;
-	}
-
-	/* Load file */
-	time.tic();
-	if(pcl::io::load<PointT>(argv[1], *cld_in) < 0)
-	{
-		PCL_ERROR ("Error loading cloud %s.\n", argv[1]);
-    	return -1;
-	}
-    pcl::removeNaNFromPointCloud(*cld_in, *cld_in, nan_idx);
-	std::cout << "Loaded file " << argv[1] << " (" << cld_in->size() 
-		<< " points) in " << time.toc() << " ms" << std::endl;
-
-    // Defining a rotation matrix and translation vector
-    Eigen::Matrix4d transformation_matrix = Eigen::Matrix4d::Identity ();
-
-    // A rotation matrix (see https://en.wikipedia.org/wiki/Rotation_matrix)
-    double theta = M_PI / 8;  // The angle of rotation in radians
-    transformation_matrix (0, 0) = cos (theta);
-    transformation_matrix (0, 1) = -sin (theta);
-    transformation_matrix (1, 0) = sin (theta);
-    transformation_matrix (1, 1) = cos (theta);
-
-    // A translation on Z axis (0.4 meters)
-    transformation_matrix (2, 3) = 0.4;
-
-    /* Test for 2nd possible file */
-    if(argc > 2)
-    {
-        time.tic();
-        if(pcl::io::load<PointT>(argv[2], *cld_org) < 0)
-        {
-            PCL_ERROR ("Error loading cloud %s.\n", argv[2]);
-            return -1;
-        }
-        pcl::removeNaNFromPointCloud(*cld_org, *cld_org, nan_idx);
-        std::cout << "Loaded file " << argv[2] << " (" << cld_org->size() 
-        << " points) in " << time.toc() << " ms" << std::endl;
-
-        // Executing the transformation
-        pcl::transformPointCloud (*cld_org, *cld_org, transformation_matrix);
-    }
-    else
-    {
-        // Display in terminal the transformation matrix
-        std::cout << "Applying rigid transformation to: cld_in -> cld_icp" << std::endl;
-
-        // Executing the transformation
-        // pcl::transformPointCloud (*cld_in, *cld_org, transformation_matrix);
-    }
+    if(parse_console_arguments(argc, argv))
+        return -1;
 
     //Initialize the icp cloud
     *cld_icp = *cld_org;  
@@ -249,14 +367,15 @@ main(int argc, char const *argv[])
     std::thread align_thread(compute_align, check_color(*cld_icp));
 
 	/* Window loop */
-	while (!viewer.wasStopped ())
+	while (!viewer->wasStopped ())
 	{
         _mtx.lock();
-        viewer.spinOnce ();
+        viewer->spinOnce ();
         _mtx.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
     align_thread.join();
+    delete viewer;
 	return 0;
 }
