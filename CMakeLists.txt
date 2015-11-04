@@ -36,7 +36,7 @@ endif(OpenCV_FOUND AND OPENNI_FOUND)
 
 # Dependencies for ht_icp_check
 # Boost program_options
-find_package(Boost 1.40 COMPONENTS program_options REQUIRED)
+find_package(Boost 1.40 COMPONENTS program_options)
 #final test
 if(Boost_FOUND)
 	include_directories(${Boost_INCLUDE_DIRS})

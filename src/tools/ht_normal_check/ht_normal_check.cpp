@@ -1,4 +1,5 @@
 #include <pcl/console/time.h>
+#include <pcl/console/parse.h>
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/io/auto_io.h>
 #include <pcl/visualization/common/actor_map.h>
@@ -15,6 +16,9 @@ typedef pcl::PointCloud<PointT> PointCloudT;
 static PointCloudT::Ptr cld(new PointCloudT);
 static pcl::PointCloud<pcl::Normal>::Ptr cld_normals (new pcl::PointCloud<pcl::Normal>);
 static pcl::visualization::PCLVisualizer::Ptr viewer;
+
+//Applications parameters
+static float radius(0.1f);
 
 bool
 check_color(const PointCloudT &cloud)
@@ -57,12 +61,13 @@ normal_estimation()
 
 	ne.setInputCloud (cld);
 	ne.setSearchMethod (tree);
-	ne.setRadiusSearch (0.1);
+	ne.setRadiusSearch (radius);
 	ne.setViewPoint(0.0f, -4.0f, 0.f);
 	time.tic();
 	ne.compute (*cld_normals);
 	std::cout << "Took " << time.toc()/1000.f 
-		<< "(s) to estimate normals" << std::endl;
+		<< "(s) to estimate normals" << std::endl
+		<< "Used " << radius << " search radius." << endl;
 	return 0;
 }
 
@@ -79,6 +84,9 @@ parse_console_arguments(const int argc, char** const argv)
         PCL_ERROR ("Error loading cloud %s.\n", argv[1]);
         return -1;
     }
+
+    //Parse radius
+    pcl::console::parse_argument(argc, argv, "-r",radius);
 
 	return 0;
 }
