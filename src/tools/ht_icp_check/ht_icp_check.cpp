@@ -13,6 +13,8 @@
 
 #include <boost/program_options.hpp>
 
+#include <vtkRenderWindow.h>
+
 //Setting up a point cloud type
 typedef pcl::PointXYZRGBA PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
@@ -25,6 +27,7 @@ static PointCloudT::Ptr cld_in(new PointCloudT),
 // static pcl::visualization::PCLVisualizer viewer("HipsterTech ICP Check");
 static pcl::visualization::PCLVisualizer *viewer;
 static int v1 (0), v2 (1);
+static vtkSmartPointer< vtkRenderWindow > win;
 
 //Icp object
 static pcl::IterativeClosestPoint<PointT, PointT> icp;
@@ -148,7 +151,7 @@ compute_align(const bool color)
 
     period_start = boost::posix_time::microsec_clock::local_time ();
 
-    while(!viewer->wasStopped())
+    while(!viewer->wasStopped() && win->IsDrawable())
     {
 
         time.tic();
@@ -212,7 +215,7 @@ parse_input_files(const boost::program_options::variables_map &vm)
         << " points) in " << time.toc() << " ms" << std::endl;
 
     //Deal with optional second file
-    if(files.size() < 1)
+    if(files.size() < 2)
     {
         *cld_org = *cld_in;
         return 0;
@@ -363,11 +366,14 @@ main(int argc, char const *argv[])
     /* ICP Setup */
     icp_setup();
 
+    /* VTK hook */
+    win = viewer->getRenderWindow();  
+
     /* Spawn computational thread */
     std::thread align_thread(compute_align, check_color(*cld_icp));
 
 	/* Window loop */
-	while (!viewer->wasStopped ())
+	while (!viewer->wasStopped() && win->IsDrawable())
 	{
         _mtx.lock();
         viewer->spinOnce ();
