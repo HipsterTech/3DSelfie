@@ -1,7 +1,15 @@
-## ht_icp_check 
+ht_icp_check 
+=============
+A tool meant to provide quick visualization of the outcome of ICP between two point clouds. 
+Dependencies
+------------
+* [PCL trunk](https://github.com/PointCloudLibrary/pcl)
+* [boost-program-options](http://www.boost.org/)  (will be removed soon)
 
-A tool meant to provide quick visualization of the outcome of ICP between two point clouds. A few examples are shown below.
 
+Examples
+--------
+A few examples are shown below.
 #### Print help
 ```
 $ ./ht_icp_check  --help
@@ -88,4 +96,5 @@ watch magic happen... really slowly.
 
 - [x] Implement proper command line parsing (Unix style)
 - [ ] Print all info in the GUI
+- [ ] Remove the depency from boost-program-options and use pcl::console
 
