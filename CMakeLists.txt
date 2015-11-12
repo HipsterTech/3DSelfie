@@ -48,6 +48,14 @@ endif(Boost_FOUND)
 add_executable (ht_normal_check src/tools/ht_normal_check/ht_normal_check.cpp)
 target_link_libraries (ht_normal_check ${PCL_LIBRARIES} ${PCL_IO_LIBRARIES})
 
+# Dependencies for ht_voxel_grid_check (none other than pcl)
+add_executable (ht_voxel_grid_check src/tools/ht_voxel_grid_check/ht_voxel_grid_check.cpp)
+target_link_libraries (ht_voxel_grid_check ${PCL_LIBRARIES} ${PCL_IO_LIBRARIES})
+
+# Dependencies for ht_fast_bilateral_filter_check (none other than pcl)
+add_executable (ht_fast_bilateral_filter_check src/tools/ht_fast_bilateral_filter_check/ht_fast_bilateral_filter_check.cpp)
+target_link_libraries (ht_fast_bilateral_filter_check ${PCL_LIBRARIES} ${PCL_IO_LIBRARIES})
+
 #Final Summary
 message("\nModules that will be built:\n")
 
@@ -58,6 +66,7 @@ if(Boost_FOUND)
 	message("\t- ht_icp_check")
 endif(Boost_FOUND)
 message("\t- ht_normal_check")
+message("\t- ht_voxel_grid_check")
 
 message("\nModules that will NOT be built:\n")
 if(NOT (OpenCV_FOUND AND OPENNI_FOUND))

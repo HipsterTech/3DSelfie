@@ -3,6 +3,7 @@
 3DSelfie is an attempt to make dense reconstruction using RGB-D frames, making use of PCL. In order to gain some additional insight of functionalities within PCL, a number of auxiliary tools are being developed. So far the following tools were developed:
 * [ht_icp_check](https://github.com/HipsterTech/3DSelfie/tree/master/src/tools/ht_icp_check)
 * [ht_normal_check](https://github.com/HipsterTech/3DSelfie/tree/master/src/tools/ht_normal_check)
+* [ht_voxel_grid_check](https://github.com/HipsterTech/3DSelfie/tree/master/src/tools/ht_normal_check)
  
 Although this project is cross-platform, we currently have only tested things under Darwin platforms, so please excuse us if it raises issues on other platforms.  
 
@@ -31,6 +32,11 @@ Dependencies
 * [xfeatures2d for OpenCV 3](https://github.com/Itseez/opencv_contrib/tree/master/modules/xfeatures2d)
 
 For depencies on each individual tool, check their own ```readme.md``` file.
+
+TODO
+--------------------
+[ ] Too many things
+[ ] Remove OpenCV dependency
 
 General Info
 --------------------

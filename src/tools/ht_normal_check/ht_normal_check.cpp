@@ -9,7 +9,6 @@
 
 //Useful typedefs
 typedef pcl::PointXYZRGBA PointT;
-// typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
 
 //Filthy globals
@@ -19,22 +18,6 @@ static pcl::visualization::PCLVisualizer::Ptr viewer;
 
 //Applications parameters
 static float radius(0.1f);
-
-bool
-check_color(const PointCloudT &cloud)
-{
-    uint32_t color;
-
-    if(cloud.empty())
-        return false;
-
-    color =  ((uint32_t)255 << 24);
-    for (auto p = cloud.points.begin(); p != cloud.points.end(); ++p)
-        if(p->rgba != color)
-            return true;    
-        
-    return false;
-}
 
 int
 visualize_normals()
@@ -56,7 +39,7 @@ int
 normal_estimation()
 {
 	pcl::console::TicToc time;
-	pcl::NormalEstimationOMP<PointT, pcl::Normal> ne(2);
+	pcl::NormalEstimationOMP<PointT, pcl::Normal> ne;
 	pcl::search::KdTree<PointT>::Ptr tree (new pcl::search::KdTree<PointT> ());
 
 	ne.setInputCloud (cld);
@@ -77,6 +60,17 @@ parse_console_arguments(const int argc, char** const argv)
 	//Not enough arguments
 	if(argc < 2)
 		return -1;
+
+	//Print help and usage
+	if(pcl::console::find_switch(argc, argv, "-h")
+		|| pcl::console::find_switch(argc, argv, "--help"))
+	{
+		cout << "Usage: ht_normal_check <file> [options]" << endl
+			<< "Options" << endl
+			<< "-h,--help\t prints this help message" << endl
+			<< "-r radius \t set the radius used for normal search" << endl;
+		return 1;
+	}
 
 	//Load cloud
 	if(pcl::io::load<PointT>(argv[1], *cld) < 0)
