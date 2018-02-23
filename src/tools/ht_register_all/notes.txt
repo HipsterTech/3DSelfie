@@ -1,0 +1,8 @@
+Recommend Voxel decimation with size 0.01 x 0.01 x 0.01
+Original was 0.005f
+
+Estimate normals with radius
+original was 0.02f
+
+Create a registration cloud, to store features, normals, etc.
+
